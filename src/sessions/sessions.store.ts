@@ -37,7 +37,15 @@ export function upsertSession(event: PlayerEvent): Session {
       events: [],
     };
   } else {
-    session.lastEventAt = new Date(event.eventTimestamp);
+    const eventTime = new Date(event.eventTimestamp);
+    // Update startedAt if this event is earlier (out-of-order delivery).
+    if (eventTime < session.startedAt) {
+      session.startedAt = eventTime;
+    }
+    // Update lastEventAt if this event is later.
+    if (eventTime > session.lastEventAt) {
+      session.lastEventAt = eventTime;
+    }
   }
 
   switch (event.eventType) {
