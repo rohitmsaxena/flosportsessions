@@ -1,4 +1,4 @@
-# REDME.md — Watch Session Tracker (FloSports Take-Home)
+# README.md — Watch Session Tracker (FloSports Take-Home)
 
 ## What This Service Does
 Ingests player SDK events from a video streaming platform and provides
@@ -112,6 +112,26 @@ buffer_start → buffering
 buffer_end → active
 end → ended (isActive = false)
 ```
+
+## Assumptions
+- **Event schema is fixed.** The SDK owns the schema; we accept it as-is. The confusing dual use of `eventId` (top-level = dedup key, `payload.eventId` = sporting event) is the SDK's design, not ours. In a real engagement I'd ask if we can rename `payload.eventId` to `payload.sportingEventId` to reduce confusion.
+- **Wall-clock duration is acceptable.** `duration` measures time from first event to last event, including paused and buffering periods. If product needs actual watch time (excluding pauses), we'd need to track state transition timestamps and subtract non-active intervals. I'd ask product which definition they want before building it.
+- **Events arrive roughly in order.** The SDK fires events sequentially per session. We don't handle out-of-order delivery (e.g., a `heartbeat` arriving before `start` due to network reordering). For v1 this is fine; in production we'd sort by `eventTimestamp` before processing.
+- **No event replay or backfill.** If the service restarts, in-flight sessions are lost. The PRD says "events that get dropped are gone forever — there's no replay mechanism yet," so persistence isn't expected for v1.
+- **Single instance only.** In-memory state means one process. Horizontal scaling would require moving sessions to Redis or a shared store. This is a known limitation we'd address before production.
+- **Heartbeat interval is 30 seconds.** The PRD states this. We use a 60-second inactivity threshold (30s heartbeat + 30s grace) to determine if a session is still active. If the heartbeat interval changes, this threshold needs to change with it.
+
+## Tools and Resources Used
+- **Claude (AI assistant)** — Used for initial project scaffolding, generating boilerplate (Fastify setup, Jest config, TypeScript config), drafting test cases, and iterating on the queue/processor architecture. All generated code was reviewed and modified to fit the design.
+- **Fastify documentation** — Referenced for schema validation syntax, plugin registration pattern, and lifecycle hooks (`onReady`, `onClose`).
+- **Jest documentation** — Referenced for `inject()` testing pattern (Fastify's built-in alternative to Supertest for integration tests).
+
+## Trade-offs
+- **In-memory queue over external queue (SQS/Redis).** Keeps the service to a single `npm run dev` with zero infrastructure. The trade-off is that queued events are lost on crash. In production, SQS would give us durability, retry, and dead-letter queues — but that's infrastructure complexity that doesn't belong in a v1 POC.
+- **In-memory Map over SQLite/Redis.** Node's long-running process model supports in-memory state natively. This avoids I/O latency and setup overhead. The cost is no persistence across restarts and no horizontal scaling. In production, Redis would be the natural next step — it gives us shared state across instances, TTL-based expiration for inactive sessions, and pub/sub for real-time viewer count updates.
+- **Dedup set grows unbounded.** The `processedEventIds` Set and the `sessions` Map never evict entries. For a 2-hour POC this is fine. In production, we'd add TTL-based eviction (e.g., remove dedup entries after 5 minutes, archive ended sessions after 1 hour).
+- **100ms drain interval over immediate processing.** Batching gives us a natural backpressure mechanism — if events arrive faster than we process, they queue up rather than overwhelming the processor. The 100ms interval means viewer counts lag by at most ~100ms, well within the 10-15 second target.
+- **Storing full event history on each session.** Convenient for the session details endpoint and debugging, but memory-expensive at scale. In production, events would go to a time-series store (e.g., ClickHouse, TimescaleDB) and the session would only hold computed state.
 
 ## What We Are NOT Building
 - No authentication
