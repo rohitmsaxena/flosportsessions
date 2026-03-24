@@ -1,7 +1,18 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+## Stack
+TypeScript + Fastify + Jest + Supertest. No database, no external services.
 
-## Project
+## Structure
+src/events/ — routes, queue, processor, schema
+src/sessions/ — routes, store, types
+tests/ — events, sessions, load
 
-This is the **flosportsessions** repository. It is currently in its initial state with no source code or build configuration yet.
+## Key Types
+[just the interfaces]
+
+## Commands
+npm run dev / npm test / npm run build
+
+## Do NOT build
+- Auth, database, external queue, websockets

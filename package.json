@@ -1,0 +1,29 @@
+{
+  "name": "flosportsessions",
+  "version": "1.0.0",
+  "description": "Ingests player SDK events from a video streaming platform and provides real-time analytics on active viewer sessions. Replaces a legacy hourly batch pipeline with a near-real-time alternative.",
+  "main": "dist/server.js",
+  "scripts": {
+    "build": "tsc",
+    "dev": "npx ts-node src/server.ts",
+    "start": "node dist/server.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/rohitmsaxena/flosportsessions.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/rohitmsaxena/flosportsessions/issues"
+  },
+  "homepage": "https://github.com/rohitmsaxena/flosportsessions#readme",
+  "dependencies": {
+    "fastify": "^5.8.4"
+  },
+  "devDependencies": {
+    "@types/node": "^25.5.0",
+    "typescript": "^6.0.2"
+  }
+}
