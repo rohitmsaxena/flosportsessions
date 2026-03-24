@@ -122,12 +122,20 @@ end → ended (isActive = false)
 - **Heartbeat interval is 30 seconds.** The PRD states this. We use a 60-second inactivity threshold (30s heartbeat + 30s grace) to determine if a session is still active. If the heartbeat interval changes, this threshold needs to change with it.
 
 ## Tools and Resources Used
-- **Claude (AI assistant)** — Used for initial project scaffolding, generating boilerplate (Fastify setup, Jest config, TypeScript config), drafting test cases, and iterating on the queue/processor architecture. All generated code was reviewed and modified to fit the design.
-- **Fastify documentation** — Referenced for schema validation syntax, plugin registration pattern, and lifecycle hooks (`onReady`, `onClose`).
-- **Jest documentation** — Referenced for `inject()` testing pattern (Fastify's built-in alternative to Supertest for integration tests).
+### Claude (AI assistant)
+- Used for project analysis and creating overall architecture
+- Used for initial project scaffolding & generating boilerplate (Fastify setup, Jest config, TypeScript config)
+- Drafting test cases
+- Iterating on the queue/processor architecture. 
+- All generated code was reviewed and modified to fit the design.
+
+### Fastify documentation
+- Referenced for schema validation syntax, plugin registration pattern, and lifecycle hooks (`onReady`, `onClose`).
+### Jest documentation
+- Referenced for `inject()` testing pattern (Fastify's built-in alternative to Supertest for integration tests).
 
 ## Trade-offs
-- **In-memory queue over external queue (SQS/Redis).** Keeps the service to a single `npm run dev` with zero infrastructure. The trade-off is that queued events are lost on crash. In production, SQS would give us durability, retry, and dead-letter queues — but that's infrastructure complexity that doesn't belong in a v1 POC.
+- **In-memory queue over external queue (SQS/Redis).** Keeps the service to a single `npm run dev` with zero infrastructure. The queued events are lost on crash. In production, SQS would give us durability, retry, and dead-letter queues — but that's infrastructure complexity that doesn't belong in a v1 POC.
 - **In-memory Map over SQLite/Redis.** Node's long-running process model supports in-memory state natively. This avoids I/O latency and setup overhead. The cost is no persistence across restarts and no horizontal scaling. In production, Redis would be the natural next step — it gives us shared state across instances, TTL-based expiration for inactive sessions, and pub/sub for real-time viewer count updates.
 - **Dedup set grows unbounded.** The `processedEventIds` Set and the `sessions` Map never evict entries. For a 2-hour POC this is fine. In production, we'd add TTL-based eviction (e.g., remove dedup entries after 5 minutes, archive ended sessions after 1 hour).
 - **100ms drain interval over immediate processing.** Batching gives us a natural backpressure mechanism — if events arrive faster than we process, they queue up rather than overwhelming the processor. The 100ms interval means viewer counts lag by at most ~100ms, well within the 10-15 second target.
